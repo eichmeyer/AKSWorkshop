@@ -1,0 +1,44 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: persistent-volume-binder
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: persistent-volume-binder
+    namespace: kube-system
+---
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+   name: slow
+  provisioner: kubernetes.io/azure-disk
+  parameters:
+   skuName: Standard_LRS
+   location: eastus
+---
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: mysql-pv-claim
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-vote
+type: Opaque
+data:
+  MYSQL_USER: ZGJ1c2Vy
+  MYSQL_PASSWORD: UGFzc3dvcmQxMg==
+  MYSQL_DATABASE: YXp1cmV2b3Rl
+  MYSQL_HOST: YXp1cmUtdm90ZS1iYWNr
+  MYSQL_ROOT_PASSWORD: UGFzc3dvcmQxMg==

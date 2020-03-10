@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: app-front-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - demo-aks-4711.eastus.cloudapp.azure.com
+    secretName: tls-secret
+  rules:
+  - host: demo-aks-4711.eastus.cloudapp.azure.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: azure-vote-front
+          servicePort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: azure-vote-front
+spec:
+    type: ExternalName
+    externalName: azure-vote-front.default.svc.cluster.local
+    ports:
+    - port: 80

@@ -127,7 +127,7 @@ az acr login --name AKSDemoACR4711
 # get the login server address.  The adress looks like that aksdemoacr4711.azurecr.io
 az acr list --resource-group AKSDemoRG4711 --query "[].{acrLoginServer:loginServer}" --output table
 
-# Tag a container image
+# Tag a container image (Attention: lower case)
 docker tag azure-vote-front aksdemoacr4711.azurecr.io/azure-vote-front:v1
 docker tag azure-vote-back aksdemoacr4711.azurecr.io/azure-vote-back:v1
 

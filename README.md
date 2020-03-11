@@ -229,7 +229,7 @@ kubectl apply -f AKS/app_back.yaml
 kubectl apply -f AKS/app_front.yaml
 
 # deploy LoadBlancer
-kubectl apply -f AKS/AzureLB.yaml
+kubectl apply -f AKS/azurelb.yaml
 
 # Or all files in folder 
 # kubectl apply -f AKS/.
@@ -322,8 +322,8 @@ kubectl get certificate --namespace ingress-basic
 kubectl describe certificate tls-secret --namespace ingress-basic
 
 # Change first LB to internal
-kubectl delete -f AKS/AzureLB.yaml
-kubectl apply -f AKSIngress/AzureLB.yaml
+kubectl delete -f AKS/azurelb.yaml
+kubectl apply -f AKSIngress/azurelb.yaml
 
 ````
 

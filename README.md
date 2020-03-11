@@ -28,9 +28,9 @@ This demo is based on code from Microsoft, published at [Github Azure-Saples](ht
 1. Container build locally. (Windows 10 with Docker for Windows)
 2. Create ACR, AKS
 3. Deploy App
-4. https with ingress
-5. Update Apps
-6. AKS updates / upgrades
+4. Update App
+5. AKS updates / upgrades
+6. https with ingress
 7. Remove all
 
 ### 1. Docker Conatainer
@@ -239,7 +239,86 @@ kubectl get service azure-vote-front
 ```
 As soon as the external address is displayed, the application can be reached via this IP. However, it may take a few minutes before the routing really works.
 
-### 4. https with ingress 
+### 4. Update App
+Finally we want to roll out an update to our running environment. For this we edit the file 
+./App/azure-vote/azure-vote/config_file.cfg
+```
+TITLE = 'Azure Voting App'
+VOTE1VALUE = 'Car'
+VOTE2VALUE = 'Train'
+SHOWHOST = 'false'
+```
+No we rebuild the images, tag and upload the new azure-vote-front build:
+```BASH
+# Rbuild images
+cd /c/AKS/App
+docker-compose build
+
+# Tag image
+docker tag azure-vote-front aksdemoacr4711.azurecr.io/azure-vote-front:v2
+
+# Upload
+az login
+az acr login --name AKSDemoACR4711
+docker push aksdemoacr4711.azurecr.io/azure-vote-front:v2
+```
+Update app_front.yaml to use the new version:
+
+app_front.yaml
+```YAML
+...
+containers:
+- name: azure-vote-front
+  image: aksdemoacr4711.azurecr.io/azure-vote-front:v2
+...
+```
+
+```BASH
+# Get a fresh login
+az login
+
+# Connect to cluster using kubectl
+az aks get-credentials --resource-group AKSDemoRG4711 --name AKSDemoAKS4711
+
+# Update deployment
+cd /c/AKS/AKS
+kubectl apply -f app_front.yaml
+```
+
+### 5. AKS updates / upgrades
+
+#### AKS Node updates
+
+In an AKS cluster, your Kubernetes nodes run as Azure virtual machines (VMs). These Linux-based VMs use an Ubuntu image, with the OS configured to automatically check for updates every night. If security or kernel updates are available, they are automatically downloaded and installed. Some security updates, such as kernel updates, require a node reboot to finalize the process. A Linux node that requires a reboot creates a file named /var/run/reboot-required. This reboot process doesn't happen automatically.
+
+You can use your own workflows and processes to handle node reboots, or use kured to orchestrate the process. With kured, a DaemonSet is deployed that runs a pod on each Linux node in the cluster. These pods in the DaemonSet watch for existence of the /var/run/reboot-required file, and then initiate a process to reboot the nodes.
+
+```BASH
+# deploy the kured DaemonSet
+kubectl apply -f kured-1.2.0-dockerhub.yaml
+```
+
+#### AKS upgrade
+```BASH
+# Check for available AKS cluster upgrades
+az aks get-upgrades \
+    --resource-group AKSDemoRG4711 \
+    --name AKSDemoAKS4711 \
+    --output table
+
+# following example upgrades a cluster to version 1.13.10
+az aks upgrade \
+    --resource-group AKSDemoRG4711 \
+    --name AKSDemoAKS4711 \
+    --kubernetes-version 1.13.10
+
+# To confirm that the upgrade was successful
+az aks show \
+    --resource-group AKSDemoRG4711 \
+    --name AKSDemoAKS4711 \
+    --output table
+```
+### 6. https with ingress 
 
 This part uses Helm to install the NGINX ingress controller and cert-manager.
 Helm is a "package manager" for Kubernetes. More info: [helm.se](https://helm.se)
@@ -327,84 +406,7 @@ kubectl apply -f AKSIngress/azurelb.yaml
 
 ````
 
-### 5. App update
-Finally we want to roll out an update to our running environment. For this we edit the file 
-./App/azure-vote/azure-vote/config_file.cfg
-```
-TITLE = 'Azure Voting App'
-VOTE1VALUE = 'Car'
-VOTE2VALUE = 'Train'
-SHOWHOST = 'false'
-```
-No we rebuild the images, tag and upload the new azure-vote-front build:
-```BASH
-# Rbuild images
-cd /c/AKS/App
-docker-compose build
 
-# Tag image
-docker tag azure-vote-front aksdemoacr4711.azurecr.io/azure-vote-front:v2
-
-# Upload
-az login
-az acr login --name AKSDemoACR4711
-docker push aksdemoacr4711.azurecr.io/azure-vote-front:v2
-```
-Update app_front.yaml to use the new version:
-
-app_front.yaml
-```YAML
-...
-containers:
-- name: azure-vote-front
-  image: aksdemoacr4711.azurecr.io/azure-vote-front:v2
-...
-```
-
-```BASH
-# Get a fresh login
-az login
-
-# Connect to cluster using kubectl
-az aks get-credentials --resource-group AKSDemoRG4711 --name AKSDemoAKS4711
-
-# Update deployment
-cd /c/AKS/AKS
-kubectl apply -f app_front.yaml
-```
-### 6. AKS updates / upgrades
-
-#### AKS Node updates
-
-In an AKS cluster, your Kubernetes nodes run as Azure virtual machines (VMs). These Linux-based VMs use an Ubuntu image, with the OS configured to automatically check for updates every night. If security or kernel updates are available, they are automatically downloaded and installed. Some security updates, such as kernel updates, require a node reboot to finalize the process. A Linux node that requires a reboot creates a file named /var/run/reboot-required. This reboot process doesn't happen automatically.
-
-You can use your own workflows and processes to handle node reboots, or use kured to orchestrate the process. With kured, a DaemonSet is deployed that runs a pod on each Linux node in the cluster. These pods in the DaemonSet watch for existence of the /var/run/reboot-required file, and then initiate a process to reboot the nodes.
-
-```BASH
-# deploy the kured DaemonSet
-kubectl apply -f kured-1.2.0-dockerhub.yaml
-```
-
-#### AKS upgrade
-```BASH
-# Check for available AKS cluster upgrades
-az aks get-upgrades \
-    --resource-group AKSDemoRG4711 \
-    --name AKSDemoAKS4711 \
-    --output table
-
-# following example upgrades a cluster to version 1.13.10
-az aks upgrade \
-    --resource-group AKSDemoRG4711 \
-    --name AKSDemoAKS4711 \
-    --kubernetes-version 1.13.10
-
-# To confirm that the upgrade was successful
-az aks show \
-    --resource-group AKSDemoRG4711 \
-    --name AKSDemoAKS4711 \
-    --output table
-```
 ### 7. Remove all
 
 ```BASH
